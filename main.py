@@ -1,51 +1,82 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from matplotlib.dates import date2num
 
 
 def load_roadmap_data(filename):
     tech_df = pd.read_excel(filename, sheet_name="Technology")
     cap_df = pd.read_excel(filename, sheet_name="Capabilities")
+    roadmap_df = pd.read_excel(filename, sheet_name="Roadmap")
 
-    for df in [tech_df, cap_df]:
+    for df in [tech_df, cap_df, roadmap_df]:
         df['Start Date'] = pd.to_datetime(df['Start Date'])
         df['End Date'] = pd.to_datetime(df['End Date'])
 
-    tech_df['Layer'] = 'Technology'
-    cap_df['Layer'] = 'Capabilities'
-
-    return tech_df, cap_df
+    return tech_df, cap_df, roadmap_df
 
 
-def plot_layer(ax, df, title, bar_height):
-    df = df.sort_values(by='Impact Rating')
+def plot_risk_section(ax, roadmap_df):
+    max_budget = roadmap_df['Exp. Budget'].max()
+
+    for idx, row in roadmap_df.iterrows():
+        start_date = row['Start Date']
+        risk = row['Risk Rating']
+        budget = row['Exp. Budget']
+        budget_risk = row['Budget Risk']
+        timeline_risk = row['Timeline Risk']
+        id_label = row['ID']
+
+        # Plot red dot at risk
+        ax.plot(start_date, risk, 'o', markersize=4, color='red')
+
+        # Draw vertical budget line
+        line_length = (budget / max_budget) * 9
+        budget_bottom = risk - line_length
+        ax.vlines(start_date, risk, budget_bottom, colors='red', linewidth=1)
+
+        # Add ID label in italics above the dot
+        ax.text(start_date, risk + 0.5, str(id_label),
+                ha='center', va='bottom', fontsize=8, fontstyle='italic')
+
+        # Calculate rectangle properties
+        rect_height = line_length + budget_risk
+        rect_width_days = timeline_risk * 2 * 30.44  # months to days
+        rect_bottom = budget_bottom - (budget_risk / 2)
+        rect_left = start_date - pd.Timedelta(days=rect_width_days / 2)
+
+        # Draw risk bounding box
+        ax.add_patch(patches.Rectangle(
+            (rect_left, rect_bottom),
+            pd.to_timedelta(rect_width_days, unit='D'),
+            rect_height,
+            linewidth=0.5,
+            edgecolor='black',
+            facecolor='lightblue',
+            alpha=0.5
+        ))
+
+    ax.set_ylabel("Risk", rotation=90, fontsize=10, fontweight='bold')
+    ax.set_ylim(-5, 10)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.set_yticks([])
+    ax.grid(True, axis='x', linestyle='--', color='gray', alpha=0.5)
+
+
+def plot_layer(ax, df, title, bar_height, fixed_slots=12):
+    df = df.sort_values(by='Impact Rating').reset_index(drop=True)
     position_tracker = {}
 
-    for idx, row in df.iterrows():
+    for i, (idx, row) in enumerate(df.iterrows()):
         label = f"{row['ID']} - {row['Name']}"
-        if label not in position_tracker:
-            position_tracker[label] = len(position_tracker)
-
-    spacing = 0.35  # reduce to bring bars closer
-    total_tracks = len(position_tracker)
-    ax.set_ylim(-spacing / 2, (total_tracks - 1) * spacing + spacing / 2)
-
-    bar_positions = {}
+        position_tracker[label] = i
 
     for idx, row in df.iterrows():
         start = row['Start Date']
         end = row['End Date']
         label = f"{row['ID']} - {row['Name']}"
         color = row.get('Color', '#1f77b4')
-        y = position_tracker[label] * spacing  # apply spacing
-
-        bar_positions[row['ID']] = {
-            'x_start': start,
-            'x_center': start + (end - start) / 2,
-            'y': y,
-            'layer': title
-        }
+        y = position_tracker[label]
 
         ax.add_patch(patches.Rectangle(
             (start, y - bar_height / 2),
@@ -62,45 +93,53 @@ def plot_layer(ax, df, title, bar_height):
 
     ax.set_yticks([])
     ax.set_ylabel(title, rotation=90, fontsize=11, labelpad=10, weight='bold', va='center')
+    ax.set_ylim(-0.5, fixed_slots - 0.5)
     ax.grid(True, axis='x', linestyle='--', color='gray', alpha=0.5)
 
-    return bar_positions
 
-
-def plot_roadmap(tech_df, cap_df):
-    fig, (ax1, ax2) = plt.subplots(
-        2, 1,
-        figsize=(14, 8),
+def plot_combined_roadmap(tech_df, cap_df, roadmap_df):
+    fig, (ax0, ax1, ax2) = plt.subplots(
+        3, 1,
+        figsize=(14, 9),
         sharex=True,
-        gridspec_kw={'height_ratios': [1, 1], 'hspace': 0}
+        gridspec_kw={'height_ratios': [0.5, 1, 1], 'hspace': 0}
     )
 
-    overall_start = min(tech_df['Start Date'].min(), cap_df['Start Date'].min())
-    overall_end = max(tech_df['End Date'].max(), cap_df['End Date'].max())
+    overall_start = min(
+        tech_df['Start Date'].min(),
+        cap_df['Start Date'].min(),
+        roadmap_df['Start Date'].min()
+    )
+    overall_end = max(
+        tech_df['End Date'].max(),
+        cap_df['End Date'].max(),
+        roadmap_df['End Date'].max()
+    )
 
-    for ax in (ax1, ax2):
+    for ax in (ax0, ax1, ax2):
         ax.set_xlim([overall_start, overall_end])
         ax.tick_params(axis='x', which='both', bottom=True, top=False, labelbottom=False)
         ax.spines['top'].set_visible(False)
-        ax.spines['bottom'].set_linewidth(0.8)
-        ax.spines['left'].set_linewidth(0.8)
         ax.spines['right'].set_visible(False)
 
     ax2.tick_params(axis='x', labelbottom=True)
 
-    BAR_HEIGHT = 0.2
-    cap_pos = plot_layer(ax1, cap_df, "Capabilities", BAR_HEIGHT)
-    tech_pos = plot_layer(ax2, tech_df, "Technology", BAR_HEIGHT)
+    BAR_HEIGHT = 1
+    FIXED_ROWS = 12
+
+    plot_risk_section(ax0, roadmap_df)
+    plot_layer(ax1, cap_df, "Capabilities", BAR_HEIGHT, FIXED_ROWS)
+    plot_layer(ax2, tech_df, "Technology", BAR_HEIGHT, FIXED_ROWS)
 
     ax2.set_xlabel("Time", fontsize=11)
-    fig.suptitle("Roadmap: Capabilities and Technologies", fontsize=16)
+    fig.suptitle("Full Product Roadmap", fontsize=16)
     plt.subplots_adjust(left=0.1, right=0.98, top=0.93, bottom=0.08)
-    plt.savefig("roadmap.png", dpi=300, bbox_inches='tight')
-    plt.show()
+    plt.savefig("roadmap_full.png", dpi=300, bbox_inches='tight')
 
 
 # === Main Program ===
 if __name__ == "__main__":
     excel_path = "PRM-Data.xlsx"
-    tech_df, cap_df = load_roadmap_data(excel_path)
-    plot_roadmap(tech_df, cap_df)
+    tech_df, cap_df, roadmap_df = load_roadmap_data(excel_path)
+    plot_combined_roadmap(tech_df, cap_df, roadmap_df)
+    plt.show()
