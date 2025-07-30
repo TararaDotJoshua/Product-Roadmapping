@@ -13,7 +13,7 @@ The "Technology" sheet contains the data for the "Technology" chart within the g
 
 The "Roadmap" sheet is by-far the most complicated. This sheet contains all the data for the main roadmap chart at the top of the graphic. The major Y-Axis is Risk Rating, provided by user, and the minor Y-axis for different elements of the charts differ based on the chart element. The top point of each mark on this chart represents the (Time, Risk Rating) relation. The line extended from the bottom of this point is a scaled representation of the expected budget for the activity. The "Glass Box" around every marker is the "Overall Risk" of the activity. The X length of the Glass box represents the time range of which an activity is expected to be completed. The Y length of the box is the Max. budget expected for the activity.
 
-Each activity, Capabillity, and technology has it's own identifier (Ex. A01, C02, T03). The first letter represnents what dataset the ID is from, Activity is A, Technology is T, and so-on. The number is the chronological order in which each figure is expected to happen within it's dataset.
+Each activity, Capabillity, and technology has it's own identifier (Ex. A01, C02, T03). The first letter represnents what dataset the ID is from, Activity is A, Technology is T, MS is Milestone, and so-on. The number is the chronological order in which each figure is expected to happen within it's dataset.
 
 <img width="1750" height="943" alt="{C91B5BB1-5C91-40E3-969D-FB991847C1C6}" src="https://github.com/user-attachments/assets/5c210d21-8585-4805-a30d-2cf22d84c80c" />
 
