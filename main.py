@@ -84,8 +84,8 @@ def plot_layer(ax, df, title, bar_height, fixed_slots=12):
             bar_height,
             facecolor=color,
             edgecolor='black',
-            linewidth=1.2,
-            alpha=0.9
+            linewidth=0.5,   # Match the error box border
+            alpha=0.7        # Slightly transparent fill
         ))
 
         ax.text(start + (end - start) / 2, y, label,
@@ -95,6 +95,7 @@ def plot_layer(ax, df, title, bar_height, fixed_slots=12):
     ax.set_ylabel(title, rotation=90, fontsize=11, labelpad=10, weight='bold', va='center')
     ax.set_ylim(-0.5, fixed_slots - 0.5)
     ax.grid(True, axis='x', linestyle='--', color='gray', alpha=0.5)
+
 
 
 def plot_combined_roadmap(tech_df, cap_df, roadmap_df):
