@@ -2,49 +2,57 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-
 def load_roadmap_data(filename):
     tech_df = pd.read_excel(filename, sheet_name="Technology")
     cap_df = pd.read_excel(filename, sheet_name="Capabilities")
     roadmap_df = pd.read_excel(filename, sheet_name="Roadmap")
+    milestone_df = pd.read_excel(filename, sheet_name="Milestones")
 
-    for df in [tech_df, cap_df, roadmap_df]:
-        df['Start Date'] = pd.to_datetime(df['Start Date'])
-        df['End Date'] = pd.to_datetime(df['End Date'])
+    for df in [tech_df, cap_df, roadmap_df, milestone_df]:
+        if 'Start Date' in df.columns:
+            df['Start Date'] = pd.to_datetime(df['Start Date'])
+        if 'End Date' in df.columns:
+            df['End Date'] = pd.to_datetime(df['End Date'])
+        if 'Date' in df.columns:
+            df['Date'] = pd.to_datetime(df['Date'])
 
-    return tech_df, cap_df, roadmap_df
+    return tech_df, cap_df, roadmap_df, milestone_df
 
+def add_milestone_lines(ax, milestone_df):
+    for _, row in milestone_df.iterrows():
+        date = row['Date']
+        milestone_id = row['ID']
 
-def plot_risk_section(ax, roadmap_df):
+        ax.axvline(date, color='darkblue', linestyle='-', linewidth=1.5, alpha=0.3)
+        ax.text(date, 0.98, milestone_id, rotation=90, verticalalignment='top',
+                horizontalalignment='center', transform=ax.get_xaxis_transform(),
+                fontsize=8, color='darkblue', weight='bold')
+
+def plot_risk_section(ax, roadmap_df, milestone_df):
     max_budget = roadmap_df['Exp. Budget'].max()
+    risk_points = []
 
-    for idx, row in roadmap_df.iterrows():
+    for _, row in roadmap_df.iterrows():
         start_date = row['Start Date']
         risk = row['Risk Rating']
         budget = row['Exp. Budget']
         budget_risk = row['Budget Risk']
         timeline_risk = row['Timeline Risk']
-        id_label = row['ID']
+        activity_id = row['ID']
 
-        # Plot red dot at risk
         ax.plot(start_date, risk, 'o', markersize=4, color='red')
+        ax.text(start_date, risk + 1.2, activity_id, ha='center', va='bottom',
+                fontsize=8, style='italic', color='black')
 
-        # Draw vertical budget line
         line_length = (budget / max_budget) * 9
         budget_bottom = risk - line_length
         ax.vlines(start_date, risk, budget_bottom, colors='red', linewidth=1)
 
-        # Add ID label in italics above the dot
-        ax.text(start_date, risk + 0.5, str(id_label),
-                ha='center', va='bottom', fontsize=8, fontstyle='italic')
-
-        # Calculate rectangle properties
         rect_height = line_length + budget_risk
-        rect_width_days = timeline_risk * 2 * 30.44  # months to days
+        rect_width_days = timeline_risk * 2 * 30.44
         rect_bottom = budget_bottom - (budget_risk / 2)
         rect_left = start_date - pd.Timedelta(days=rect_width_days / 2)
 
-        # Draw risk bounding box
         ax.add_patch(patches.Rectangle(
             (rect_left, rect_bottom),
             pd.to_timedelta(rect_width_days, unit='D'),
@@ -55,23 +63,30 @@ def plot_risk_section(ax, roadmap_df):
             alpha=0.5
         ))
 
-    ax.set_ylabel("Risk", rotation=90, fontsize=10, fontweight='bold')
+        risk_points.append((start_date, risk))
+
+    risk_points.sort(key=lambda x: x[0])
+    dates, risks = zip(*risk_points)
+    ax.plot(dates, risks, color='black', linewidth=1, linestyle='--', alpha=0.6)
+
+    add_milestone_lines(ax, milestone_df)
+
+    ax.set_ylabel("Risk", rotation=90, fontsize=10, weight='bold')
     ax.set_ylim(-5, 10)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     ax.set_yticks([])
     ax.grid(True, axis='x', linestyle='--', color='gray', alpha=0.5)
 
-
 def plot_layer(ax, df, title, bar_height, fixed_slots=12):
     df = df.sort_values(by='Impact Rating').reset_index(drop=True)
     position_tracker = {}
 
-    for i, (idx, row) in enumerate(df.iterrows()):
+    for i, (_, row) in enumerate(df.iterrows()):
         label = f"{row['ID']} - {row['Name']}"
         position_tracker[label] = i
 
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         start = row['Start Date']
         end = row['End Date']
         label = f"{row['ID']} - {row['Name']}"
@@ -84,8 +99,8 @@ def plot_layer(ax, df, title, bar_height, fixed_slots=12):
             bar_height,
             facecolor=color,
             edgecolor='black',
-            linewidth=0.5,   # Match the error box border
-            alpha=0.7        # Slightly transparent fill
+            linewidth=0.5,
+            alpha=0.7
         ))
 
         ax.text(start + (end - start) / 2, y, label,
@@ -96,9 +111,7 @@ def plot_layer(ax, df, title, bar_height, fixed_slots=12):
     ax.set_ylim(-0.5, fixed_slots - 0.5)
     ax.grid(True, axis='x', linestyle='--', color='gray', alpha=0.5)
 
-
-
-def plot_combined_roadmap(tech_df, cap_df, roadmap_df):
+def plot_combined_roadmap(tech_df, cap_df, roadmap_df, milestone_df):
     fig, (ax0, ax1, ax2) = plt.subplots(
         3, 1,
         figsize=(14, 9),
@@ -128,7 +141,7 @@ def plot_combined_roadmap(tech_df, cap_df, roadmap_df):
     BAR_HEIGHT = 1
     FIXED_ROWS = 12
 
-    plot_risk_section(ax0, roadmap_df)
+    plot_risk_section(ax0, roadmap_df, milestone_df)
     plot_layer(ax1, cap_df, "Capabilities", BAR_HEIGHT, FIXED_ROWS)
     plot_layer(ax2, tech_df, "Technology", BAR_HEIGHT, FIXED_ROWS)
 
@@ -141,6 +154,6 @@ def plot_combined_roadmap(tech_df, cap_df, roadmap_df):
 # === Main Program ===
 if __name__ == "__main__":
     excel_path = "PRM-Data.xlsx"
-    tech_df, cap_df, roadmap_df = load_roadmap_data(excel_path)
-    plot_combined_roadmap(tech_df, cap_df, roadmap_df)
+    tech_df, cap_df, roadmap_df, milestone_df = load_roadmap_data(excel_path)
+    plot_combined_roadmap(tech_df, cap_df, roadmap_df, milestone_df)
     plt.show()
