@@ -23,10 +23,15 @@ def add_milestone_lines(ax, milestone_df):
         date = row['Date']
         milestone_id = row['ID']
 
-        ax.axvline(date, color='darkblue', linestyle='-', linewidth=1.5, alpha=0.3)
-        ax.text(date, 0.98, milestone_id, rotation=90, verticalalignment='top',
-                horizontalalignment='center', transform=ax.get_xaxis_transform(),
+        # Vertical milestone line (only in top chart)
+        ax.vlines(date,ymin=-4, ymax=9.5, color='darkblue', linestyle='-', linewidth=1.5, alpha=0.3)
+
+        # Horizontal text label centered below line, in data coordinates
+        ax.text(date, -5, milestone_id,  # slightly below y-axis min
+                rotation=0,  # horizontal text
+                ha='center', va='top',
                 fontsize=8, color='darkblue', weight='bold')
+
 
 def plot_risk_section(ax, roadmap_df, milestone_df):
     max_budget = roadmap_df['Exp. Budget'].max()
@@ -116,7 +121,7 @@ def plot_combined_roadmap(tech_df, cap_df, roadmap_df, milestone_df):
         3, 1,
         figsize=(14, 9),
         sharex=True,
-        gridspec_kw={'height_ratios': [0.5, 1, 1], 'hspace': 0}
+        gridspec_kw={'height_ratios': [1.5, .5, .5], 'hspace': 0}
     )
 
     overall_start = min(
@@ -139,7 +144,7 @@ def plot_combined_roadmap(tech_df, cap_df, roadmap_df, milestone_df):
     ax2.tick_params(axis='x', labelbottom=True)
 
     BAR_HEIGHT = 1
-    FIXED_ROWS = 12
+    FIXED_ROWS = 6
 
     plot_risk_section(ax0, roadmap_df, milestone_df)
     plot_layer(ax1, cap_df, "Capabilities", BAR_HEIGHT, FIXED_ROWS)
