@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.dates as mdates
 
 def load_roadmap_data(filename):
     tech_df = pd.read_excel(filename, sheet_name="Technology")
@@ -22,16 +23,9 @@ def add_milestone_lines(ax, milestone_df):
     for _, row in milestone_df.iterrows():
         date = row['Date']
         milestone_id = row['ID']
-
-        # Vertical milestone line (only in top chart)
-        ax.vlines(date,ymin=-4, ymax=9.5, color='darkblue', linestyle='-', linewidth=1.5, alpha=0.3)
-
-        # Horizontal text label centered below line, in data coordinates
-        ax.text(date, -4.25, milestone_id,  # slightly below y-axis min
-                rotation=0,  # horizontal text
-                ha='center', va='top',
+        ax.vlines(date, ymin=-4, ymax=9.5, color='darkblue', linestyle='-', linewidth=1.5, alpha=0.3)
+        ax.text(date, -4.25, milestone_id, ha='center', va='top',
                 fontsize=8, color='darkblue', weight='bold')
-
 
 def plot_risk_section(ax, roadmap_df, milestone_df):
     max_budget = roadmap_df['Exp. Budget'].max()
@@ -45,13 +39,13 @@ def plot_risk_section(ax, roadmap_df, milestone_df):
         timeline_risk = row['Timeline Risk']
         activity_id = row['ID']
 
-        ax.plot(start_date, risk, 'o', markersize=4, color='red')
+        ax.plot(start_date, risk, 'o', markersize=4, color='red', zorder=5)
         ax.text(start_date, risk + 1.2, activity_id, ha='center', va='bottom',
-                fontsize=8, style='italic', color='black')
+                fontsize=8, style='italic', color='black', zorder=5)
 
         line_length = (budget / max_budget) * 9
         budget_bottom = risk - line_length
-        ax.vlines(start_date, risk, budget_bottom, colors='red', linewidth=1)
+        ax.vlines(start_date, risk, budget_bottom, colors='red', linewidth=1, zorder=5)
 
         rect_height = line_length + budget_risk
         rect_width_days = timeline_risk * 2 * 30.44
@@ -65,14 +59,36 @@ def plot_risk_section(ax, roadmap_df, milestone_df):
             linewidth=0.5,
             edgecolor='black',
             facecolor='lightblue',
-            alpha=0.5
+            alpha=0.5,
+            zorder=3
         ))
 
-        risk_points.append((start_date, risk))
+        risk_points.append({
+            "date": start_date,
+            "top": risk,
+            "bottom": budget_bottom
+        })
 
-    risk_points.sort(key=lambda x: x[0])
-    dates, risks = zip(*risk_points)
-    ax.plot(dates, risks, color='black', linewidth=1, linestyle='--', alpha=0.6)
+    # Draw quad polygons behind the bars
+    for i in range(len(risk_points) - 1):
+        t1 = risk_points[i]
+        t2 = risk_points[i + 1]
+        height = t1["top"] - t1["bottom"]
+        mid2 = (t2["top"] + t2["bottom"]) / 2
+        top2 = mid2 + height / 2
+        bottom2 = mid2 - height / 2
+
+        x1 = mdates.date2num(t1["date"])
+        x2 = mdates.date2num(t2["date"])
+
+        polygon = patches.Polygon([
+            (x1, t1["top"]),
+            (x2, top2),
+            (x2, bottom2),
+            (x1, t1["bottom"])
+        ], closed=True, facecolor='salmon', edgecolor='black',
+           linewidth=0.5, alpha=0.4, zorder=2)
+        ax.add_patch(polygon)
 
     add_milestone_lines(ax, milestone_df)
 
@@ -154,7 +170,6 @@ def plot_combined_roadmap(tech_df, cap_df, roadmap_df, milestone_df):
     fig.suptitle("Full Product Roadmap", fontsize=16)
     plt.subplots_adjust(left=0.1, right=0.98, top=0.93, bottom=0.08)
     plt.savefig("roadmap_full.png", dpi=300, bbox_inches='tight')
-
 
 # === Main Program ===
 if __name__ == "__main__":
