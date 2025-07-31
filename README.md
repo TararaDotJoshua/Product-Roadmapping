@@ -17,7 +17,9 @@ Each activity, Capabillity, and technology has it's own identifier (Ex. A01, C02
 
 <img width="1750" height="943" alt="{C91B5BB1-5C91-40E3-969D-FB991847C1C6}" src="https://github.com/user-attachments/assets/5c210d21-8585-4805-a30d-2cf22d84c80c" />
 
+
 The graph's style was originally conceptualized by reading "The visual display of Quantitative Information" by Edward R. Tufte. One graph inparticular stood out - titled "Figurative Map of the successive losses in men of the French Army in the Russian campaign" created by Charles Joseph Minard, a French civil engineer, in 1869 as shown below. This graph incorporated many interesting features and was intuitive to understand but also packed to the brim with information, making it an intruiging inspiration.
+
 
 <img width="2003" height="955" alt="image" src="https://github.com/user-attachments/assets/5cdb0e77-4346-4a8b-bdb1-0aa80b7645a4" />
 
