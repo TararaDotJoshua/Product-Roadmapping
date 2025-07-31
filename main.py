@@ -27,7 +27,7 @@ def add_milestone_lines(ax, milestone_df):
         ax.vlines(date,ymin=-4, ymax=9.5, color='darkblue', linestyle='-', linewidth=1.5, alpha=0.3)
 
         # Horizontal text label centered below line, in data coordinates
-        ax.text(date, -5, milestone_id,  # slightly below y-axis min
+        ax.text(date, -4.25, milestone_id,  # slightly below y-axis min
                 rotation=0,  # horizontal text
                 ha='center', va='top',
                 fontsize=8, color='darkblue', weight='bold')
